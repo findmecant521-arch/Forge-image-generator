@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forge AI - Image Studio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#090d16',
+                        cardBg: '#111827',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-darkBg text-slate-100 min-h-screen flex flex-col items-center justify-center p-4 md:p-8">
+
+    <!-- Main Card Container -->
+    <div class="w-full max-w-2xl bg-cardBg/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 md:p-8 shadow-2xl shadow-indigo-950/30">
+        
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold tracking-wide uppercase mb-3">
+                ⚡ Powered by Hugging Face & FLUX
+            </div>
+            <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-400 bg-clip-text text-transparent">
+                Forge AI Studio
+            </h1>
+            <p class="text-slate-400 text-sm mt-1">Transform your ideas into high-resolution AI artwork.</p>
+        </div>
+        
+        <!-- Prompt Input Area -->
+        <div class="space-y-4">
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <label for="promptInput" class="text-sm font-medium text-slate-300">Prompt Description</label>
+                    <button onclick="clearPrompt()" class="text-xs text-slate-500 hover:text-slate-300 transition">Clear Text</button>
+                </div>
+                <textarea id="promptInput" rows="3" 
+                    class="w-full bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200 resize-none shadow-inner" 
+                    placeholder="e.g., A futuristic cyberpunk city at sunset, cinematic lighting, 8k resolution..."></textarea>
+            </div>
+
+            <!-- Primary Action Button -->
+            <button id="generateBtn" onclick="generateAIImage()" 
+                class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-indigo-600/25 active:scale-[0.99] flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <span>Forge Masterpiece</span>
+            </button>
+        </div>
+
+        <!-- Image Display / Canvas Area -->
+        <div id="canvasContainer" class="mt-6 relative w-full h-80 sm:h-96 bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden flex items-center justify-center">
+            
+            <!-- Default Placeholder State -->
+            <div id="placeholder" class="text-center p-6 space-y-2">
+                <div class="w-12 h-12 rounded-full bg-slate-800/80 mx-auto flex items-center justify-center text-slate-400 text-xl">
+                    ✨
+                </div>
+                <p class="text-slate-400 text-sm font-medium">Your generated image will appear here</p>
+                <p class="text-slate-600 text-xs">Enter a prompt above to get started</p>
+            </div>
+
+            <!-- Loader State -->
+            <div id="loader" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center space-y-4">
+                <div class="w-12 h-12 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin"></div>
+                <span id="loaderText" class="text-sm font-medium text-slate-300 animate-pulse">Forging artwork with AI...</span>
+            </div>
+
+            <!-- Generated Image Result -->
+            <div id="imageDisplay" class="hidden w-full h-full relative group">
+                <img id="generatedImg" src="" alt="Generated AI Art" class="w-full h-full object-cover">
+                <div class="absolute bottom-3 left-3 right-3 bg-slate-950/80 backdrop-blur-md p-3 rounded-xl border border-slate-800/80 text-xs text-slate-300 shadow-lg">
+                    <p id="promptBadge" class="truncate font-medium"></p>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Secondary Action Buttons (Shows after image is generated) -->
+        <div id="actionControls" class="hidden mt-4 grid grid-cols-2 gap-3">
+            <button onclick="resetGenerator()" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700/80 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700/60 transition flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                New Prompt / Reset
+            </button>
+            <button onclick="downloadImage()" class="w-full py-2.5 px-4 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 text-xs font-semibold rounded-xl border border-indigo-500/30 transition flex items-center justify-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Download Image
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        async function generateAIImage() {
+            const promptInput = document.getElementById('promptInput');
+            const prompt = promptInput.value.trim();
+            const generateBtn = document.getElementById('generateBtn');
+            
+            const loader = document.getElementById('loader');
+            const placeholder = document.getElementById('placeholder');
+            const imageDisplay = document.getElementById('imageDisplay');
+            const generatedImg = document.getElementById('generatedImg');
+            const promptBadge = document.getElementById('promptBadge');
+            const actionControls = document.getElementById('actionControls');
+
+            if (!prompt) {
+                alert('Please enter a prompt first!');
+                return;
+            }
+
+            // Lock UI & Show Loader
+            generateBtn.disabled = true;
+            generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            loader.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            imageDisplay.classList.add('hidden');
+            actionControls.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to generate image');
+                }
+
+                // Render image
+                generatedImg.src = data.imageUrl;
+                promptBadge.innerText = `✨ "${prompt}"`;
+                
+                imageDisplay.classList.remove('hidden');
+                actionControls.classList.remove('hidden');
+
+            } catch (err) {
+                alert('Error: ' + err.message);
+                placeholder.classList.remove('hidden');
+            } finally {
+                loader.classList.add('hidden');
+                generateBtn.disabled = false;
+                generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // Resets the canvas so you can generate a new prompt without refreshing the browser tab
+        function resetGenerator() {
+            document.getElementById('promptInput').value = '';
+            document.getElementById('imageDisplay').classList.add('hidden');
+            document.getElementById('actionControls').classList.add('hidden');
+            document.getElementById('placeholder').classList.remove('hidden');
+            document.getElementById('promptInput').focus();
+        }
+
+        function clearPrompt() {
+            document.getElementById('promptInput').value = '';
+            document.getElementById('promptInput').focus();
+        }
+
+        function downloadImage() {
+            const img = document.getElementById('generatedImg');
+            if (!img.src) return;
+            const link = document.createElement('a');
+            link.href = img.src;
+            link.download = `forge-ai-${Date.now()}.jpg`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
